@@ -409,6 +409,11 @@ def disconnecthandler(mqc,userdata,rc):
     if verbosity >= 2:
         print("MQTT Disconnected, RC:"+str(rc))
 
+def loghandler(mgc, userdata, level, buf):
+    if verbosity >= 4:
+        print("MQTT LOG:" + buf)
+
+
 
 if True:
 #Setup MODBUS Master
@@ -435,6 +440,7 @@ if True:
     mqc.on_connect=connecthandler
     mqc.on_message=messagehandler
     mqc.on_disconnect=disconnecthandler
+    mqc.on_log= loghandler
     mqc.will_set(globaltopic+"connected","True",qos=2,retain=True)
     mqc.initial_connection_attempted = False
     mqc.initial_connection_made = False
