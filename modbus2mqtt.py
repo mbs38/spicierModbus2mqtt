@@ -52,10 +52,10 @@ parser.add_argument('--mqtt-port', default=None, type=int, help='Defaults to 888
 parser.add_argument('--mqtt-topic', default='modbus/', help='Topic prefix to be used for subscribing/publishing. Defaults to "modbus/"')
 parser.add_argument('--mqtt-user', default=None, help='Username for authentication (optional)')
 parser.add_argument('--mqtt-pass', default="", help='Password for authentication (optional)')
-parser.add_argument('--mqqt-use-tls', action='store_true')
+parser.add_argument('--mqtt-use-tls', action='store_true')
 parser.add_argument('--mqtt-insecure', action='store_true')
-parser.add_argument('--mqqt-cacerts', default=None, help="Path to keychain including ")
-parser.add_argument('--mqqt-tls-version', default=None, help='TLS protocol version, can be one of tlsv1.2 tlsv1.1 or tlsv1')
+parser.add_argument('--mqtt-cacerts', default=None, help="Path to keychain including ")
+parser.add_argument('--mqtt-tls-version', default=None, help='TLS protocol version, can be one of tlsv1.2 tlsv1.1 or tlsv1')
 parser.add_argument('--rtu',help='pyserial URL (or port name) for RTU serial port')
 parser.add_argument('--rtu-baud', default='19200', type=int, help='Baud rate for serial port. Defaults to 19200')
 parser.add_argument('--rtu-parity', default='even', choices=['even','odd','none'], help='Parity for serial port. Defaults to even')
@@ -444,7 +444,7 @@ if True:
     mqtt_port = args.mqtt_port
 
     if mqtt_port is None:
-        if args.mqqt_use_tls:
+        if args.mqtt_use_tls:
             mqtt_port = 8883
         else:
             mqtt_port = 1883
@@ -461,7 +461,7 @@ if True:
     if args.mqtt_user or args.mqtt_pass:
         mqc.username_pw_set(args.mqtt_user, args.mqtt_pass)
 
-    if args.mqqt_use_tls:
+    if args.mqtt_use_tls:
 
         if args.mqtt_tls_version == "tlsv1.2":
             tls_version = ssl.PROTOCOL_TLSv1_2
@@ -479,11 +479,10 @@ if True:
 
         if args.mqtt_insecure:
             cert_regs = ssl.CERT_NONE
-
         else:
             cert_regs = ssl.CERT_REQUIRED
 
-        mqc.tls_set(ca_certs=args.mqqt_cacerts, certfile= None, keyfile=None, cert_reqs=cert_regs, tls_version=tls_version)
+        mqc.tls_set(ca_certs=args.mqtt_cacerts, certfile= None, keyfile=None, cert_reqs=cert_regs, tls_version=tls_version)
 
         if args.mqtt_insecure:
             mqc.tls_insecure_set(True)
@@ -509,16 +508,16 @@ while control.runLoop:
                 print("MODBUS connection error, trying again...")
 
     if not mqc.initial_connection_attempted:
-        try:
+       try:
             print("Connecting to MQTT Broker: " + args.mqtt_host + ":" + str(mqtt_port) + "...")
             mqc.connect(args.mqtt_host, mqtt_port, 60)
             mqc.initial_connection_attempted = True #Once we have connected the mqc loop will take care of reconnections.
             mqc.loop_start()
             if verbosity >= 1:
                 print("MQTT Loop started")
-        except:
+       except:
             if verbosity>=1:
-                print("Socket Error connecting to MQTT broker: " + args.mqtt_host + ":" + str(mqtt_port) + ", check LAN/Internet connection, trying again...")
+              print("Socket Error connecting to MQTT broker: " + args.mqtt_host + ":" + str(mqtt_port) + ", check LAN/Internet connection, trying again...")
 
     if mqc.initial_connection_made: #Don't start polling unless the initial connection to MQTT has been made, no offline MQTT storage will be available until then.
         if modbus_connected:
