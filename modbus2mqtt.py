@@ -51,6 +51,10 @@ parser.add_argument('--mqtt-port', default='1883', type=int, help='MQTT server p
 parser.add_argument('--mqtt-topic', default='modbus/', help='Topic prefix to be used for subscribing/publishing. Defaults to "modbus/"')
 parser.add_argument('--mqtt-user', default=None, help='Username for authentication (optional)')
 parser.add_argument('--mqtt-pass', default="", help='Password for authentication (optional)')
+parser.add_argument('--mqqt-use-tls', action='store_true')
+parser.add_argument('--mqtt-insecure', action='store_true')
+parser.add_argument('--mqqt-cacerts', default=None, help="Path to keychain including ")
+parser.add_argument('--mqqt-tls-version', default=None, help='TLS protocol version, can be one of tlsv1.2 tlsv1.1 or tlsv1')
 parser.add_argument('--rtu',help='pyserial URL (or port name) for RTU serial port')
 parser.add_argument('--rtu-baud', default='19200', type=int, help='Baud rate for serial port. Defaults to 19200')
 parser.add_argument('--rtu-parity', default='even', choices=['even','odd','none'], help='Parity for serial port. Defaults to even')
@@ -446,6 +450,34 @@ if True:
     mqc.initial_connection_made = False
     if args.mqtt_user or args.mqtt_pass:
         mqc.username_pw_set(args.mqtt_user, args.mqtt_pass)
+
+    if args.mqqt_use_tls:
+
+        if args.tls_version == "tlsv1.2":
+            tls_version = ssl.PROTOCOL_TLSv1_2
+        elif args.tls_version == "tlsv1.1":
+            tls_version = ssl.PROTOCOL_TLSv1_1
+        elif args.tls_version == "tlsv1":
+            tls_version = ssl.PROTOCOL_TLSv1
+        elif args.tls_version is None:
+            tls_version = None
+        else:
+            if verbosity >= 2:
+                print("Unknown TLS version - ignoring")
+            tls_version = None
+
+
+        if args.mqtt_insecure:
+            cert_regs = ssl.CERT_NONE
+            mqc.tls_insecure_set(True)
+        else:
+            cert_regs = ssl.CERT_REQUIRED
+
+        mqc.tls_set(ca_certs=args.mqqt_cacerts, certfile= None, keyfile=None, cert_reqs=cert_regs, tls_version=tls_version)
+
+
+
+
 
 #Setup HomeAssistant
     if(addToHass):
