@@ -438,7 +438,7 @@ if True:
     mqc.will_set(globaltopic+"connected","True",qos=2,retain=True)
     mqc.initial_connection_attempted = False
     mqc.initial_connection_made = False
-    if args.mqtt_user:
+    if args.mqtt_user or args.mqtt_pass:
         mqc.username_pw_set(args.mqtt_user, args.mqtt_pass)
 
 #Setup HomeAssistant
