@@ -48,7 +48,7 @@ version="0.3"
     
 parser = argparse.ArgumentParser(description='Bridge between ModBus and MQTT')
 parser.add_argument('--mqtt-host', default='localhost', help='MQTT server address. Defaults to "localhost"')
-parser.add_argument('--mqtt-port', default=None, type=int, help='Defaults to 8883 for TLS or 1883 for non-TLS'')
+parser.add_argument('--mqtt-port', default=None, type=int, help='Defaults to 8883 for TLS or 1883 for non-TLS')
 parser.add_argument('--mqtt-topic', default='modbus/', help='Topic prefix to be used for subscribing/publishing. Defaults to "modbus/"')
 parser.add_argument('--mqtt-user', default=None, help='Username for authentication (optional)')
 parser.add_argument('--mqtt-pass', default="", help='Password for authentication (optional)')
@@ -463,13 +463,13 @@ if True:
 
     if args.mqqt_use_tls:
 
-        if args.tls_version == "tlsv1.2":
+        if args.mqtt_tls_version == "tlsv1.2":
             tls_version = ssl.PROTOCOL_TLSv1_2
-        elif args.tls_version == "tlsv1.1":
+        elif args.mqtt_tls_version == "tlsv1.1":
             tls_version = ssl.PROTOCOL_TLSv1_1
-        elif args.tls_version == "tlsv1":
+        elif args.mqtt_tls_version == "tlsv1":
             tls_version = ssl.PROTOCOL_TLSv1
-        elif args.tls_version is None:
+        elif args.mqtt_tls_version is None:
             tls_version = None
         else:
             if verbosity >= 2:
@@ -479,13 +479,14 @@ if True:
 
         if args.mqtt_insecure:
             cert_regs = ssl.CERT_NONE
-            mqc.tls_insecure_set(True)
+
         else:
             cert_regs = ssl.CERT_REQUIRED
 
         mqc.tls_set(ca_certs=args.mqqt_cacerts, certfile= None, keyfile=None, cert_reqs=cert_regs, tls_version=tls_version)
 
-
+        if args.mqtt_insecure:
+            mqc.tls_insecure_set(True)
 
 
 
