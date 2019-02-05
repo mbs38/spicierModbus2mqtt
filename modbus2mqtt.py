@@ -67,7 +67,7 @@ parser.add_argument('--verbosity', default='3', type=int, help='Verbose level, 0
 parser.add_argument('--autoremove',action='store_true',help='Automatically remove poller if modbus communication has failed three times.')
 parser.add_argument('--add-to-homeassistant',action='store_true',help='Add devices to Home Assistant using Home Assistant\'s MQTT-Discovery')
 parser.add_argument('--set-loop-break',default='0.01',type=float, help='Set pause in main polling loop. Defaults to 10ms.')
-
+parser.add_argument('--bool-number',default=False, type=bool, help='Send bools, e.g. coil as a number 0 or 1' )
 
 args=parser.parse_args()
 verbosity=args.verbosity
@@ -265,20 +265,27 @@ class Reference:
         # but only after the intial connection was made.
         if mqc.initial_connection_made == True:
             if self.poller.dataType == "int32":
-                val = result[self.relativeReference]*256 + result[self.relativeReference+1]
+                val = result[self.relativeReference]*65536 + result[self.relativeReference+1]
             else:
                 val = result[self.relativeReference]
 
             if self.lastval != val:
                 self.lastval= val
                 try:
-                    publish_result = mqc.publish(globaltopic+self.device.name+"/state/"+self.topic,self.lastval,qos=1,retain=True)
+                    if args.bool-number == True:
+                        if self.lastval == True: 
+                            value = 1
+                        elif self.lastval == False:
+                            value = 0
+                    else:
+                        value = self.lastval
+                        
+                    publish_result = mqc.publish(globaltopic+self.device.name+"/state/"+self.topic,value,qos=1,retain=True)
                     if verbosity>=4:
-                        print("published MQTT topic: " + str(self.device.name+"/state/"+self.topic)+"value: " + str(self.lastval)+" RC:"+str(publish_result.rc))
+                        print("published MQTT topic: " + str(self.device.name+"/state/"+self.topic)+" value: " + str(value)+" RC:"+str(publish_result.rc))
                 except:
                     if verbosity>=1:
-                        print("Error publishing MQTT topic: " + str(self.device.name+"/state/"+self.topic)+"value: " + str(self.lastval))
-
+                        print("Error publishing MQTT topic: " + str(self.device.name+"/state/"+self.topic)+" value: " + str(value))
         
 pollers=[]
 
@@ -295,6 +302,9 @@ with open(args.config,"r") as csvfile:
             if row["col5"] == "holding_register":
                 functioncode = 3
                 dataType="int16"
+            if row["col5"] == "holding_register_32BE":
+                functioncode = 3
+                dataType="int32"
             if row["col5"] == "coil":
                 functioncode = 1
                 dataType="bool"
