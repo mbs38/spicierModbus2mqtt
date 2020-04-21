@@ -457,7 +457,13 @@ class Reference:
         self.topic=topic
         self.reference=int(reference)
         self.lastval=None
-        self.scale=scaling
+        self.scale=None
+        if scaling:
+            try:
+                self.scale=float(scaling)
+            except ValueError as e:
+              if verbosity>=1:
+                print("Scaling Error:", e)
         self.rw=rw
         self.relativeReference=None
         self.writefunctioncode=None
@@ -486,7 +492,7 @@ class Reference:
             if self.lastval != val:
                 self.lastval = val
                 if self.scale:
-                  val = val * float(self.scale)
+                    val = val * self.scale
                 try:
                     publish_result = mqc.publish(globaltopic+self.device.name+"/state/"+self.topic,val,retain=True)
                     if verbosity>=4:
