@@ -66,13 +66,17 @@ parser.add_argument('--tcp-port', default='502', type=int, help='Port for MODBUS
 parser.add_argument('--set-modbus-timeout',default='1',type=float, help='Response time-out for MODBUS devices')
 parser.add_argument('--config', required=True, help='Configuration file. Required!')
 parser.add_argument('--verbosity', default='3', type=int, help='Verbose level, 0=silent, 1=errors only, 2=connections, 3=mb writes, 4=all')
-parser.add_argument('--autoremove',action='store_true',help='Automatically remove poller if modbus communication has failed three times.')
+parser.add_argument('--autoremove',action='store_true',help='Automatically remove poller if modbus communication has failed three times. Removed pollers can be reactivated by sending "True" or "1" to topic modbus/reset-autoremove')
 parser.add_argument('--add-to-homeassistant',action='store_true',help='Add devices to Home Assistant using Home Assistant\'s MQTT-Discovery')
 parser.add_argument('--set-loop-break',default='0.01',type=float, help='Set pause in main polling loop. Defaults to 10ms.')
-
+parser.add_argument('--diagnostics-rate',default='0',type=int, help='Time in seconds after which for each device diagnostics are published via mqtt. Set to sth. like 600 (= every 10 minutes) or so.')
 
 args=parser.parse_args()
 verbosity=args.verbosity
+loopBreak=args.set_loop_break
+if loopBreak == 0:
+    loopBreak = 0.01
+    print("ERROR: Loop break must not be 0! Using default value (0.01) instead.")
 addToHass=False
 addToHass=args.add_to_homeassistant
 
@@ -110,8 +114,31 @@ class Device:
         self.occupiedTopics=[]
         self.writableReferences=[]
         self.slaveid=slaveid
+        self.errorCount=0
+        self.pollCount=0
+        self.next_due=time.clock_gettime(0)+args.diagnostics_rate
         if verbosity>=2:
             print('Added new device \"'+self.name+'\"')
+
+    def publishDiagnostics(self):
+        if args.diagnostics_rate>0:
+            if self.next_due<time.clock_gettime(0):
+                self.next_due=time.clock_gettime(0)+args.diagnostics_rate
+                error=0
+                try:
+                    error=(self.errorCount / self.pollCount)*100
+                except:
+                    error=0
+                if self.pollCount==0:
+                    error=100
+                if mqc.initial_connection_made == True:
+                    try:
+                        mqc.publish(globaltopic + self.name +"/state/diagnostics_errors_percent", str(error), qos=1, retain=True)
+                        mqc.publish(globaltopic + self.name +"/state/diagnostics_errors_total", str(self.errorCount), qos=1, retain=True)
+                    except:
+                        pass
+                self.pollCount=0
+                self.errorCount=0
 
 
 class Poller:
@@ -144,20 +171,28 @@ class Poller:
 
 
     def failCount(self,failed):
+        self.device.pollCount+=1
         if not failed:
             self.failcounter=0
             if not self.connected:
                 self.connected = True
                 mqc.publish(globaltopic + self.topic +"/connected", "True", qos=1, retain=True)
         else:
+            self.device.errorCount+=1
             if self.failcounter==3:
                 if args.autoremove:
                     self.disabled=True
-                    print("Poller "+self.topic+" with Slave-ID "+str(self.slaveid)+ " and functioncode "+str(self.functioncode)+" disabled due to the above error.")
+                    if verbosity >=1:
+                        print("Poller "+self.topic+" with Slave-ID "+str(self.slaveid)+" disabled (functioncode: "+str(self.functioncode)+", start reference: "+str(self.reference)+", size: "+str(self.size)+").")
+                    for p in pollers: #also fail all pollers with the same slave id
+                        if p.slaveid == self.slaveid:
+                            p.failcounter=3
+                            p.disabled=True
+                            if verbosity >=1:
+                                print("Poller "+p.topic+" with Slave-ID "+str(p.slaveid)+" disabled (functioncode: "+str(p.functioncode)+", start reference: "+str(p.reference)+", size: "+str(p.size)+").")
                 self.failcounter=4
                 self.connected = False
                 mqc.publish(globaltopic + self.topic +"/connected", "False", qos=1, retain=True)
-                
             else:
                 if self.failcounter<3:
                     self.failcounter+=1
@@ -206,12 +241,16 @@ class Poller:
                 except:
                     failed = True
                     if verbosity>=1:
-                        print("Error talking to slave device:"+str(self.slaveid)+", trying again...")
+                        print("Error talking to slave device:"+str(self.slaveid)+" (connection timeout)")
                 self.failCount(failed)
             else:
                 if master.connect():
-                    if verbosity >= 1:
-                        print("MODBUS connected successfully")
+                    pass
+                    #if verbosity >= 1:
+                    #    print("MODBUS connected successfully")
+                    # unfortunately there is a bug in pymodbus that causes the master to signal a complete disconnect
+                    # even though only one device has caused an error. This has led to a flood of this success message for some users.
+                    # Atm. I have no real desire to fix this upstream...
                 else:
                     for p in pollers:
                         p.failed=True
@@ -374,10 +413,16 @@ class dataTypes:
             out=None
         return out
     def combineint16(self,val):
-        if (val[0] & 0x8000) > 0:
-            out = -((~val[0] & 0x7FFF)+1)
+        try:
+            len(val)
+            myval=val[0]
+        except:
+            myval=val
+
+        if (myval & 0x8000) > 0:
+            out = -((~myval & 0x7FFF)+1)
         else:
-            out = val[0]
+            out = myval
         return out
 
 
@@ -419,7 +464,11 @@ class dataTypes:
             value=None
         return value
     def combineuint16(self,val):
-        return val[0]
+        try:
+            len(val)
+            return val[0]
+        except:
+            return val
 
     def parsefloat32LE(self,msg):
         try:
@@ -565,6 +614,22 @@ with open(args.config,"r") as csvfile:
                 print("No poller for reference "+row["topic"]+".")
 
 def messagehandler(mqc,userdata,msg):
+    if str(msg.topic) == globaltopic+"reset-autoremove":
+        if not args.autoremove and verbosity>=1:
+            print("ERROR: Received autoremove-reset command but autoremove is not enabled. Check flags.")
+        if args.autoremove:
+            payload = str(msg.payload.decode("utf-8"))
+            if payload == "True" or payload == "1":
+                if verbosity>=1:
+                    print("Reactivating previously disabled pollers (command from MQTT)")
+                for p in pollers:
+                    if p.disabled == True:
+                        p.disabled = False
+                        p.failcounter = 0
+                        if verbosity>=1:
+                            print("Reactivated poller "+p.topic+" with Slave-ID "+str(p.slaveid)+ " and functioncode "+str(p.functioncode)+".")
+
+        return
     (prefix,device,function,reference) = msg.topic.split("/")
     if function != 'set':
         return
@@ -594,7 +659,7 @@ def messagehandler(mqc,userdata,msg):
                         if verbosity>=1:
                             print("Writing to device "+str(myDevice.name)+", Slave-ID="+str(myDevice.slaveid)+" at Reference="+str(myRef.reference)+" using function code "+str(myRef.writefunctioncode)+" FAILED! (Devices responded with errorcode. Maybe bad configuration?)")
             
-                except NameError:
+                except:
                     if verbosity>=1:
                         print("Error writing to slave device "+str(myDevice.slaveid)+" (maybe CRC error or timeout)")
         else:
@@ -614,7 +679,7 @@ def messagehandler(mqc,userdata,msg):
                 else:
                     if verbosity>=1:
                         print("Writing to device "+str(myDevice.name)+", Slave-ID="+str(myDevice.slaveid)+" at Reference="+str(myRef.reference)+" using function code "+str(myRef.writefunctioncode)+" FAILED! (Devices responded with errorcode. Maybe bad configuration?)")
-            except NameError:
+            except:
                 if verbosity >= 1:
                     print("Error writing to slave device "+str(myDevice.slaveid)+" (maybe CRC error or timeout)")
         else:
@@ -627,6 +692,7 @@ def connecthandler(mqc,userdata,flags,rc):
         if verbosity>=2:
             print("MQTT Broker connected succesfully: " + args.mqtt_host + ":" + str(mqtt_port))
         mqc.subscribe(globaltopic + "+/set/+")
+        mqc.subscribe(globaltopic + "reset-autoremove")
         if verbosity>=2:
             print("Subscribed to MQTT topic: "+globaltopic + "+/set/+")
         mqc.publish(globaltopic + "connected", "True", qos=1, retain=True)
@@ -762,11 +828,27 @@ while control.runLoop:
             try:
                 for p in pollers:
                     p.checkPoll()
+
+                for d in deviceList:
+                    d.publishDiagnostics()
+                anyAct=False
+                for p in pollers:
+                    if p.disabled is not True:
+                        anyAct=True
+                if not anyAct:
+                    time.sleep(5)
+                    for p in pollers:
+                        if p.disabled == True:
+                            p.disabled = False
+                            p.failcounter = 0
+                            if verbosity>=1:
+                                print("Reactivated poller "+p.topic+" with Slave-ID "+str(p.slaveid)+ " and functioncode "+str(p.functioncode)+".")
+
             except:
                 if verbosity>=1:
                     print("Exception Error when polling or publishing, trying again...")
 
-    time.sleep(args.set_loop_break)
+    time.sleep(loopBreak)
 
 master.close()
 #adder.removeAll(referenceList)
