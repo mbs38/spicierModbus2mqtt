@@ -79,14 +79,18 @@ def signal_handler(signal, frame):
         control.stopLoop()
 
 class Device:
-    def __init__(self,name,slaveid):
+    def __init__(self,name,slaveid,description=None):
         self.name=name
+        self.description=name
         self.occupiedTopics=[]
         self.writableReferences=[]
         self.slaveid=slaveid
         self.errorCount=0
         self.pollCount=0
         self.next_due=time.clock_gettime(0)+args.diagnostics_rate
+
+        if description:
+            self.description=description
         if verbosity>=2:
             print('Added new device \"'+self.name+'\"')
 
@@ -111,7 +115,7 @@ class Device:
                 self.errorCount=0
 
 class Poller:
-    def __init__(self,topic,rate,slaveid,functioncode,reference,size,dataType):
+    def __init__(self,topic,rate,slaveid,functioncode,reference,size,dataType,name=None):
         self.topic=topic
         self.rate=float(rate)
         self.slaveid=int(slaveid)
@@ -126,13 +130,14 @@ class Poller:
         self.disabled=False
         self.failcounter=0
         self.connected=False
+        self.name=name
 
         for myDev in deviceList:
             if myDev.name == self.topic:
                 self.device=myDev
                 break
         if self.device == None:
-            device = Device(self.topic,slaveid)
+            device = Device(self.topic,slaveid,self.name)
             deviceList.append(device)
             self.device=device
         if verbosity>=2:
@@ -509,13 +514,17 @@ def combinefloat32BE(self,val):
     return out
 
 class Reference:
-    def __init__(self,topic,reference,dtype,rw,poller,scaling):
+    def __init__(self,topic,reference,dtype,rw,poller,scaling,state_class="measurement",device_class=None,unit_of_measurement=None,name=None):
         self.topic=topic
         self.reference=int(reference)
         self.lastval=None
         self.scale=None
         self.regAmount=None
         self.stringLength=None
+        self.state_class=state_class
+        self.device_class=device_class
+        self.unit_of_measurement=unit_of_measurement
+        self.name=name
 
         if scaling:
             try:
@@ -779,12 +788,12 @@ def main():
                     print("Unknown function code ("+row["col5"]+" ignoring poller "+row["topic"]+".")
                     currentPoller=None
                     continue
-                currentPoller = Poller(row["topic"],rate,slaveid,functioncode,reference,size,dataType)
+                currentPoller = Poller(row["topic"],rate,slaveid,functioncode,reference,size,dataType,row["name"])
                 pollers.append(currentPoller)
                 continue
             elif row["type"]=="reference" or row["type"]=="ref":
                 if currentPoller is not None:
-                    currentPoller.addReference(Reference(row["topic"],row["col2"],row["col4"],row["col3"],currentPoller,row["col5"]))
+                    currentPoller.addReference(Reference(row["topic"],row["col2"],row["col4"],row["col3"],currentPoller,row["col5"],row["state_class"],row["device_class"],row["unit_of_measurement"],row["name"]))
                 else:
                     print("No poller for reference "+row["topic"]+".")
     
@@ -887,6 +896,7 @@ def main():
                 if verbosity >= 1:
                     print("MQTT Loop started")
            except:
+                raise
                 if verbosity>=1:
                     print("Socket Error connecting to MQTT broker: " + args.mqtt_host + ":" + str(mqtt_port) + ", check LAN/Internet connection, trying again...")
     
