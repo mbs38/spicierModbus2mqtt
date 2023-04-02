@@ -698,6 +698,7 @@ def main():
     parser.add_argument('--rtu-parity', default='even', choices=['even','odd','none'], help='Parity for serial port. Defaults to even')
     parser.add_argument('--tcp', help='Act as a Modbus TCP master, connecting to host TCP')
     parser.add_argument('--tcp-port', default='502', type=int, help='Port for MODBUS TCP. Defaults to 502')
+    parser.add_argument('--framer', default='rtu', choices=['ascii','binary','rtu','socket'], help='Frame format. Default is rtu')
     parser.add_argument('--set-modbus-timeout',default='1',type=float, help='Response time-out for MODBUS devices')
     parser.add_argument('--config', required=True, help='Configuration file. Required!')
     parser.add_argument('--verbosity', default='3', type=int, help='Verbose level, 0=silent, 1=errors only, 2=connections, 3=mb writes, 4=all')
@@ -790,6 +791,16 @@ def main():
     
     #Setup MODBUS Master
     global master
+    if args.framer:
+        if args.framer == "ascii":
+            framer = ModbusAsciiFramer;
+        if args.framer == "binary":
+            framer = ModbusBinaryFramer;
+        if args.framer == "rtu":
+            framer = ModbusRtuFramer;
+        if args.framer == "socket":
+            framer = ModbusSocketFramer;
+
     if args.rtu:
         if args.rtu_parity == "none":
                 parity = "N"
@@ -797,10 +808,10 @@ def main():
                 parity = "O"
         if args.rtu_parity == "even":
                 parity = "E"
-        master = SerialModbusClient(method="rtu", port=args.rtu, stopbits = 1, bytesize = 8, parity = parity, baudrate = int(args.rtu_baud), timeout=args.set_modbus_timeout)
+        master = SerialModbusClient(method="rtu", port=args.rtu, framer=framer, stopbits = 1, bytesize = 8, parity = parity, baudrate = int(args.rtu_baud), timeout=args.set_modbus_timeout)
     
     elif args.tcp:
-        master = TCPModbusClient(args.tcp, args.tcp_port,client_id="modbus2mqtt", clean_session=False)
+        master = TCPModbusClient(args.tcp, args.tcp_port, framer=framer, client_id="modbus2mqtt", clean_session=False)
     else:
         print("You must specify a modbus access method, either --rtu or --tcp")
         sys.exit(1)
