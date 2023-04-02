@@ -1,4 +1,4 @@
-"type","topic","col2","col3","col4","col5","col6"
+"type","topic","col2","col3","col4","col5","col6","state_class","device_class","unit_of_measurement","name"
 # DO NOT REMOVE THE FIRST LINE!
 # Example register definition file.
 #
@@ -8,7 +8,7 @@
 #################################################################################
 # Poller-object
 # Columns:
-# type, topic, slaveid, reference, size, functioncode, rate
+# type, topic, slaveid, reference, size, functioncode, rate, , , , description
 #  
 # Possible values for columns:
 # type: poll
@@ -20,6 +20,7 @@
 # size: integer 0 to 65535 (No. of registers to poll, value must not exceed the limits of Modbus of course)
 # functionscode: coil, input_status, holding_register, input_register
 # rate: float 0.0 to some really big number
+# name: visible name to the end user
 #
 # functionscode equivalents: coil, input_status, holding_register, input_register
 #                              1        2                3                4
@@ -38,6 +39,10 @@
 # rw: r, w or rw
 # data type (registers only): uint16, float32BE, float32LE, uint32BE, uint32LE, string (defaults to uint16)
 # scaling factor (registers only): a factor by which the read value is multiplied before publishing to mqtt. At the moment this only works when reading from Modbus.
+# state_class: https://developers.home-assistant.io/docs/core/entity/sensor/#available-state-classes 
+# device_class: https://developers.home-assistant.io/docs/core/entity/sensor/#available-device-classes
+# unit_of_measurement: https://developers.home-assistant.io/docs/core/entity/sensor/#available-device-classes
+# name: visible name to the end user
 #
 # Example reference-object:
 # ref,light0,2,rw
@@ -48,8 +53,8 @@
 # 
 #################################################################################
 # Columns:
-# type, topic, slaveid, reference, size, functioncode, rate
-# type, topic, reference, rw, data type,        
+# type, topic, slaveid, reference, size, functioncode, rate, , , , name
+# type, topic, reference, rw, data type, state_class, device_class, unit_of_measurement, name
 #
 poll,kitchen,7,0,4,coil,0.002
 ref,light0,0,rw
