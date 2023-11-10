@@ -131,6 +131,7 @@ class Poller:
         self.disabled=False
         self.failcounter=0
         self.connected=False
+        self.error=False
 
         for myDev in deviceList:
             if myDev.name == self.topic:
@@ -166,6 +167,8 @@ class Poller:
                                 print("Poller "+p.topic+" with Slave-ID "+str(p.slaveid)+" disabled (functioncode: "+str(p.functioncode)+", start reference: "+str(p.reference)+", size: "+str(p.size)+").")
                 self.failcounter=4
                 self.connected = False
+                if args.exit-on-error
+                    control.stopLoop()
                 mqc.publish(globaltopic + self.topic +"/connected", "False", qos=1, retain=True)
             else:
                 if self.failcounter<3:
@@ -459,6 +462,8 @@ async def async_main():
     parser.add_argument('--set-loop-break',default=None,type=float, help='Set pause in main polling loop. Defaults to 10ms.')
     parser.add_argument('--diagnostics-rate',default='0',type=int, help='Time in seconds after which for each device diagnostics are published via mqtt. Set to sth. like 600 (= every 10 minutes) or so.')
     parser.add_argument('--avoid-fc6',action='store_true', help='If set, use function code 16 (write multiple registers) even when just writing a single register')
+    parser.add_argument('--exit-on-error',action='store_true',help='Exit in case of error')
+   
     control = Control()
     signal.signal(signal.SIGINT, signal_handler)
 
