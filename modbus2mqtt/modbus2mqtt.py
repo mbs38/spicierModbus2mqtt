@@ -69,7 +69,7 @@ deviceList = []
 referenceList = []
 master = None
 control = None
-error_exit = False
+error_exit = None
 
 writeQueue = queue.SimpleQueue()
 
@@ -439,6 +439,7 @@ async def async_main():
     global loopBreak
     global globaltopic
     global control
+    global error_exit
 
     parser = argparse.ArgumentParser(description='Bridge between ModBus and MQTT')
     parser.add_argument('--mqtt-host', default='localhost', help='MQTT server address. Defaults to "localhost"')
@@ -476,6 +477,7 @@ async def async_main():
         print("Info: loop-break option has been removed, please remove from your options.")
     addToHass=False
     addToHass=args.add_to_homeassistant
+    error_exit=False
     
     globaltopic=args.mqtt_topic
     
