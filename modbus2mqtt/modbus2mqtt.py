@@ -616,6 +616,7 @@ async def async_main():
     modbus_connected = False
     current_poller = 0
     while control.runLoop:
+        time.sleep(0.001)
         if not modbus_connected:
             print("Connecting to MODBUS...")
             await master.connect()
