@@ -69,6 +69,7 @@ deviceList = []
 referenceList = []
 master = None
 control = None
+error = False
 
 writeQueue = queue.SimpleQueue()
 
@@ -168,6 +169,7 @@ class Poller:
                 self.failcounter=4
                 self.connected = False
                 if args.exit_on_error:
+                    error = True
                     control.stopLoop()
                 mqc.publish(globaltopic + self.topic +"/connected", "False", qos=1, retain=True)
             else:
@@ -680,6 +682,7 @@ async def async_main():
                 except:
                     if verbosity>=1:
                         print("Exception Error when polling or publishing, trying again...")
-    await master.close()
+    if not error:
+        await master.close()
     #adder.removeAll(referenceList)
     sys.exit(1)
