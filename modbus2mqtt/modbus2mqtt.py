@@ -680,7 +680,7 @@ async def async_main():
                 except:
                     if verbosity>=1:
                         print("Exception Error when polling or publishing, trying again...")
-    if master:
+    if modbus_connected:
         await master.close()
     #adder.removeAll(referenceList)
     sys.exit(1)
