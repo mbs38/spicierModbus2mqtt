@@ -167,7 +167,7 @@ class Poller:
                                 print("Poller "+p.topic+" with Slave-ID "+str(p.slaveid)+" disabled (functioncode: "+str(p.functioncode)+", start reference: "+str(p.reference)+", size: "+str(p.size)+").")
                 self.failcounter=4
                 self.connected = False
-                if args.exit-on-error
+                if args.exit-on-error:
                     control.stopLoop()
                 mqc.publish(globaltopic + self.topic +"/connected", "False", qos=1, retain=True)
             else:
