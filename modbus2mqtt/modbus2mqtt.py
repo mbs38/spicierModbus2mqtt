@@ -169,6 +169,7 @@ class Poller:
                 self.failcounter=4
                 self.connected = False
                 if args.exit_on_error:
+                    global error_exit
                     error_exit = True
                     control.stopLoop()
                 mqc.publish(globaltopic + self.topic +"/connected", "False", qos=1, retain=True)
