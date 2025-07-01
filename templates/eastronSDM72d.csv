@@ -1,5 +1,5 @@
 "type","topic","col2","col3","col4","col5","col6"
-#
+# command line example: python3 modbus2mqtt.py  --rtu-parity none --rtu-baud 9600 --config eastron.csv --rtu /dev/ttyUSB0
 # Template file for EASTRON SDM72D-M.
 
 poll,eastron1,1,0,8,input_register,1
