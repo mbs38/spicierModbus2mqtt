@@ -1,0 +1,123 @@
+"type","topic","col2","col3","col4","col5","col6"
+#
+# Example register definition file.
+#
+# You need to define a Poller and then one or more References for that poller.
+# The Poller will "poll" the slaveid and bring back 1 or more registers/bits.
+# The References must then match up with the polled range to define the topic for each.
+#################################################################################
+# Poller-object
+# Columns:
+# type, topic, slaveid, reference, size, functioncode, rate
+#  
+# Possible values for columns:
+# type: poll
+# topic: any string without spaces
+# slaveid: integer 1 to 254
+# reference: integer 0 to 65535 (Modbus references are as transmitted on the wire.
+# In the traditional numbering scheme these would have been called offsets. E. g. to
+# read 400020 you would use reference 20.)
+# size: integer 0 to 65535 (No. of registers to poll, value must not exceed the limits of Modbus of course)
+# functionscode: coil, input_status, holding_register, input_register, input_register_32BE
+# rate: float 0.0 to some really big number
+#
+# functionscode equivalents: coil, input_status, holding_register, input_register, input_register_32BE
+#                              1        2                3                4                  4
+# input_register_32BE will take two consecutive 16 bit registers and merge them into one Big Endian 32bit. 
+# (int1601*256 + int1602)
+#
+# Example poller-object:
+# poll,someTopic,1,2,5,coil,1.0
+# Will poll states of 5 coils from slave device 1 once a second, starting at coil 2.
+#
+#################################################################################
+# Reference-Object
+# Columns:
+# type, topic, reference, rw,      ,        
+# type: ref
+# topic: any string without spaces
+# reference: integer 0 to 65535 (This is the modbus offset and should match the poller ref)
+# rw: r, w or rw
+# data type: uint16, uint32BE, uint32LE, int16, int32BE, int32LE, string (defaults to uint16)
+#
+# Example reference-object:
+# ref,light0,2,rw
+# The state of coil 2 will be published to mqtt with the topic modbus/someTopic/state/light0
+# if column 3 contains an 'r'.
+# If you publish a value (in case of a coil: True or False) to modbus/someTopic/set/light0 and
+# column 3 contains a 'w', the new state will be written to the slave device.
+# 
+#################################################################################
+# Columns:
+# type, topic, slaveid, reference, size, functioncode, rate
+# type, topic, reference, rw, data type,        
+#
+
+
+poll,eastron1,1,0,8,input_register,1
+ref,Phase1linetoneutralvolts,0,r,float32LE
+ref,Phase2linetoneutralvolts,2,r,float32LE
+ref,Phase3linetoneutralvolts,4,r,float32LE
+ref,Phase1current,6,r,float32LE
+
+poll,eastron1,1,8,8,input_register,1
+ref,Phase2current,8,r,float32LE
+ref,Phase3current,10,r,float32LE
+ref,Phase1activepower,12,r,float32LE
+ref,Phase2activepower,14,r,float32LE
+
+poll,eastron1,1,16,8,input_register,1
+ref,Phase3activepower,16,r,float32LE
+ref,Phase2apparentpower,18,r,float32LE
+ref,Phase1apparentpower,20,r,float32LE
+ref,Phase3apparentpower,22,r,float32LE
+
+poll,eastron1,1,24,8,input_register,1
+ref,Phase1reactivepower,24,r,float32LE
+ref,Phase2reactivepower,26,r,float32LE
+ref,Phase3reactivepower,28,r,float32LE
+ref,Phase1powerfactor1,30,r,float32LE
+
+poll,eastron1,1,32,8,input_register,1
+ref,Phase2powerfactor1,32,r,float32LE
+ref,Phase3powerfactor1,34,r,float32LE
+ref,Averagelinetoneutralvolts,36,r,float32LE
+ref,Averagelinecurrent,38,r,float32LE
+
+poll,eastron1,1,40,8,input_register,1
+ref,Sumoflinecurrents,40,r,float32LE
+ref,Totalsystempower,42,r,float32LE
+ref,Totalsystemvoltamps,44,r,float32LE
+ref,TotalsystemVAr,46,r,float32LE
+
+poll,eastron1,1,48,8,input_register,1
+ref,Totalsystempowerfactor,48,r,float32LE
+ref,Frequencyofsupplyvoltages,50,r,float32LE
+ref,Importactiveenergy,52,r,float32LE
+ref,Exportactiveenergy,54,r,float32LE
+
+poll,eastron1,1,200,8,input_register,1
+ref,Line1toLine2volts,200,r,float32LE
+ref,Line2toLine3volts,202,r,float32LE
+ref,Line3toLine1volts,204,r,float32LE
+ref,Averagelinetolinevolts,206,r,float32LE
+
+poll,eastron1,1,224,2,input_register,1
+ref,Neutralcurrent,224,r,float32LE
+
+poll,eastron1,1,342,4,input_register,1
+ref,TotalactiveEnergy2,342,r,float32LE
+ref,Totalreactiveenergy,344,r,float32LE
+
+poll,eastron1,1,384,8,input_register,1
+ref,resettabletotalactiveenergy,384,r,float32LE
+ref,Resettabletotalreactiveenergy,386,r,float32LE
+ref,resettableimportactiveenergy,388,r,float32LE
+ref,resettableexportactiveenergy,390,r,float32LE
+
+poll,eastron1,1,396,2,input_register,1
+ref,NetkWhImportMinusExport,396,r,float32LE
+
+poll,eastron1,1,1280,4,input_register,1
+ref,Totalimportactivepower,1280,r,float32LE
+ref,Totalexportactivepower,1281,r,float32LE
