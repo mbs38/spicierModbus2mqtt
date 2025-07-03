@@ -51,17 +51,17 @@ run `sudo pip3 install modbus2mqtt`
 
 Without installation
 --------------------
-Requirements:
+Required python modules:
 
-* python3
-* Eclipse Paho for Python - http://www.eclipse.org/paho/clients/python/
-* pymodbus - https://github.com/riptideio/pymodbus
+* pymodbus
+* paho-mqtt
+* serial
 
 Installation of requirements:
 
-* Install python3 and python3-pip and python3-serial (on a Debian based system something like sudo apt install python3 python3-pip python3-serial will likely get you there)
-* run pip3 install pymodbus
-* run pip3 install paho-mqtt
+* install the requirements' latest version as available on pypi
+* do not try to use the versions provided by your system as these may very well be outdated
+* do not install system wide, use a python venv instead
 
 Usage
 -----
