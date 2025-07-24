@@ -177,25 +177,25 @@ class Poller:
             try:
                 time.sleep(0.002)
                 if self.functioncode == 3:
-                    result = await master.read_holding_registers(self.reference, count=self.size, slave=self.slaveid)
+                    result = await master.read_holding_registers(self.reference, count=self.size, device_id=self.slaveid)
                     if result.function_code < 0x80:
                         data = result.registers
                     else:
                         failed = True
                 if self.functioncode == 1:
-                    result = await master.read_coils(self.reference, count=self.size, slave=self.slaveid)
+                    result = await master.read_coils(self.reference, count=self.size, device_id=self.slaveid)
                     if result.function_code < 0x80:
                         data = result.bits
                     else:
                         failed = True
                 if self.functioncode == 2:
-                    result = await master.read_discrete_inputs(self.reference, count=self.size, slave=self.slaveid)
+                    result = await master.read_discrete_inputs(self.reference, count=self.size, device_id=self.slaveid)
                     if result.function_code < 0x80:
                         data = result.bits
                     else:
                         failed = True
                 if self.functioncode == 4:
-                    result = await master.read_input_registers(self.reference, count=self.size, slave=self.slaveid)
+                    result = await master.read_input_registers(self.reference, count=self.size, device_id=self.slaveid)
                     if result.function_code < 0x80:
                         data = result.registers
                     else:
@@ -342,7 +342,7 @@ async def writehandler(userdata,msg):
     if myRef.writefunctioncode == 5:
         value = myRef.parse(myRef,str(payload))
         if value != None:
-                result = await master.write_coil(int(myRef.reference),value,slave=int(myRef.device.slaveid))
+                result = await master.write_coil(int(myRef.reference),value,device_id=int(myRef.device.slaveid))
                 try:
                     if result.function_code < 0x80:
                         myRef.checkPublish(value) # writing was successful => we can assume, that the corresponding state can be set and published
@@ -368,9 +368,9 @@ async def writehandler(userdata,msg):
             except:
                 valLen=1
             if valLen>1 or args.avoid_fc6:
-                result = await master.write_registers(int(myRef.reference),value,slave=myRef.device.slaveid)
+                result = await master.write_registers(int(myRef.reference),value,device_id=myRef.device.slaveid)
             else:
-                result = await master.write_register(int(myRef.reference),value,slave=myRef.device.slaveid)
+                result = await master.write_register(int(myRef.reference),value,device_id=myRef.device.slaveid)
             try:
                 if result.function_code < 0x80:
                     myRef.checkPublish(value) # writing was successful => we can assume, that the corresponding state can be set and published
